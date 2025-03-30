@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automatic Mortal Kombat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <script>
+        // Инициализация персонажей
+        class Character {
+            constructor(name, health, damage, defense, speed, type) {
+                this.name = name;
+                this.health = health;
+                this.maxHealth = health;
+                this.damage = damage;
+                this.defense = defense;
+                this.speed = speed;
+                this.level = 1;
+                this.experience = 0;
+                this.type = type; // Силач, Ловкач, Умник
+                this.vampirism = false; // Талант вампиризма
+            }
+
+            attack(target) {
+                let damageDealt = this.damage - target.defense;
+                if (damageDealt < 0) damageDealt = 0; // Минимальный урон 0
+
+                // Шанс критического удара (Умник)
+                if (this.type === 'Умник' && Math.random() < 0.1) {
+                    damageDealt *= 2;
+                    console.log(`${this.name} наносит критический удар!`);
+                }
+
+                // Вампиризм (восстановление здоровья)
+                if (this.vampirism) {
+                    this.health += damageDealt * 0.2;
+                    if (this.health > this.maxHealth) this.health = this.maxHealth; // Ограничиваем восстановление
+                    console.log(`${this.name} восстанавливает здоровье благодаря вампиризму!`);
+                }
+
+                target.health -= damageDealt;
+                console.log(`${this.name} атакует ${target.name}, нанося ${damageDealt} урона!`);
+            }
+
+            levelUp() {
+                this.level++;
+                this.health += 10;
+                this.damage += 5;
+                this.defense += 2;
+                this.speed += 1;
+                this.experience = 0;
+
+                // При уровне 3 получаем вампиризм
+                if (this.level === 3) {
+                    this.vampirism = true;
+                    console.log(`${this.name} получает талант вампиризма!`);
+                }
+            }
+
+            gainExperience(amount) {
+                this.experience += amount;
+                if (this.experience >= 100) {
+                    this.levelUp();
+                }
+            }
+        }
+
+        let player1, player2;
+
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 400,
+            backgroundColor: '#222',
+            physics: {
+                default: 'arcade',
+                arcade: { gravity: { y: 500 } }
+            },
+            scene: { preload, create, update }
+        };
+
+        function preload() {
+            this.load.image('fighter1', 'https://i.imgur.com/JZApFhf.png'); // Картинка бойца 1
+            this.load.image('fighter2', 'https://i.imgur.com/5XQRMmu.png'); // Картинка бойца 2
+        }
+
+        function create() {
+            // Создание персонажей
+            player1 = new Character('Силач', 150, 20, 5, 1, 'Силач');
+            player2 = new Character('Ловкач', 100, 15, 10, 2, 'Ловкач');
+
+            // Игрок 1
+            let sprite1 = this.physics.add.sprite(200, 300, 'fighter1').setScale(0.5);
+            sprite1.setCollideWorldBounds(true);
+
+            // Игрок 2
+            let sprite2 = this.physics.add.sprite(600, 300, 'fighter2').setScale(0.5);
+            sprite2.setCollideWorldBounds(true);
+            sprite2.flipX = true;
+
+            // Запуск автоматического боя
+            this.time.addEvent({
+                delay: 1000,
+                callback: function() {
+                    if (player1.health > 0 && player2.health > 0) {
+                        player1.attack(player2);
+                        player2.attack(player1);
+
+                        // Добавляем опыт
+                        player1.gainExperience(10);
+                        player2.gainExperience(10);
+
+                        // Обновляем состояние здоровья
+                        console.log(`Здоровье ${player1.name}: ${player1.health}`);
+                        console.log(`Здоровье ${player2.name}: ${player2.health}`);
+                    }
+
+                    // Проверка на победу
+                    if (player1.health <= 0) {
+                        console.log(`${player2.name} победил!`);
+                    } else if (player2.health <= 0) {
+                        console.log(`${player1.name} победил!`);
+                    }
+                },
+                loop: true
+            });
+        }
+
+        function update() {
+            // Здесь можно добавить дополнительные условия для обновлений на экране
+        }
+
+        new Phaser.Game(config);
+    </script>
+</body>
+</html>
